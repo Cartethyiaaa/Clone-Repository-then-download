@@ -1,0 +1,49 @@
+name: Clone & Upload to GoFile
+
+on:
+  workflow_dispatch:
+    inputs:
+      repo_url:
+        description: "Masukkan URL git yang mau di-clone"
+        required: true
+      gofile_token:
+        description: "Masukkan API token GoFile (https://gofile.io/myProfile)"
+        required: true
+
+jobs:
+  clone_and_upload:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository (dummy, required by GitHub)
+        uses: actions/checkout@v4
+
+      - name: Clone repository from user input
+        run: |
+          echo "Cloning: ${{ github.event.inputs.repo_url }}"
+          git clone "${{ github.event.inputs.repo_url }}" repo_clone
+
+      - name: Zip the cloned repo
+        run: |
+          zip -r repo_clone.zip repo_clone
+
+      - name: Upload to GoFile
+        id: upload
+        run: |
+          echo "Uploading to GoFile..."
+          UPLOAD_RESPONSE=$(curl -s -X POST \
+            -H "Authorization: Bearer ${{ github.event.inputs.gofile_token }}" \
+            -F "file=@repo_clone.zip" \
+            https://api.gofile.io/uploadFile)
+
+          echo "Respons: $UPLOAD_RESPONSE"
+
+          # ambil direct link dari JSON
+          DIRECT_LINK=$(echo "$UPLOAD_RESPONSE" | jq -r '.data.downloadPage')
+
+          echo "direct_link=$DIRECT_LINK" >> $GITHUB_OUTPUT
+
+      - name: Show Download Link
+        run: |
+          echo "Download link dari GoFile:"
+          echo "${{ steps.upload.outputs.direct_link }}"

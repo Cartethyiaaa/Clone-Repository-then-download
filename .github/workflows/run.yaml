@@ -4,31 +4,45 @@ on:
   workflow_dispatch:
     inputs:
       repo_url:
-        description: "Masukkan URL git yang mau di-clone"
+        description: "Masukkan URL git"
         required: true
+      branch:
+        description: "Masukkan nama branch"
+        required: false
+        default: ""
 
 jobs:
   clone_and_upload:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository (dummy)
+      - name: Checkout (dummy)
         uses: actions/checkout@v4
 
-      - name: Clone repository from user input
+      - name: Clone repository sesuai input
         run: |
-          echo "Cloning: ${{ github.event.inputs.repo_url }}"
-          git clone "${{ github.event.inputs.repo_url }}" repo_clone
+          URL="${{ github.event.inputs.repo_url }}"
+          BRANCH="${{ github.event.inputs.branch }}"
+
+          echo "URL     = $URL"
+          echo "BRANCH  = $BRANCH"
+
+          if [ -z "$BRANCH" ]; then
+            echo "Cloning default branch..."
+            git clone "$URL" repo_clone
+          else
+            echo "Cloning branch: $BRANCH"
+            git clone -b "$BRANCH" "$URL" repo_clone
+          fi
 
       - name: Zip the cloned repo
         run: |
           zip -r repo_clone.zip repo_clone
 
-      - name: Upload to GoFile
+      - name: Upload ke GoFile (store1 → fallback store2)
         id: upload
         run: |
           FILE="repo_clone.zip"
-          echo "Uploading to GoFile..."
 
           RESPONSE=$(curl -s -F "file=@$FILE" "https://store1.gofile.io/contents/uploadfile" \
             || curl -s -F "file=@$FILE" "https://store2.gofile.io/contents/uploadfile")
@@ -37,10 +51,9 @@ jobs:
 
           echo -e "\nDownload link: $DOWNLOAD_LINK\n"
 
-          # Export link ke output
           echo "download_link=$DOWNLOAD_LINK" >> $GITHUB_OUTPUT
 
       - name: Show Download Link
         run: |
-          echo "== LINK HASIL UPLOAD GoFile =="
+          echo "== HASIL UPLOAD GoFile =="
           echo "${{ steps.upload.outputs.download_link }}"

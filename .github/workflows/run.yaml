@@ -4,10 +4,10 @@ on:
   workflow_dispatch:
     inputs:
       repo_url:
-        description: "Masukkan URL git"
+        description: "Masukkan URL git (contoh: https://github.com/user/repo.git)"
         required: true
       branch:
-        description: "Masukkan nama branch"
+        description: "Masukkan nama branch (opsional)"
         required: false
         default: ""
 
@@ -19,7 +19,7 @@ jobs:
       - name: Checkout (dummy)
         uses: actions/checkout@v4
 
-      - name: Clone repository sesuai input
+      - name: Clone repository (shallow clone --depth=1)
         run: |
           URL="${{ github.event.inputs.repo_url }}"
           BRANCH="${{ github.event.inputs.branch }}"
@@ -28,18 +28,17 @@ jobs:
           echo "BRANCH  = $BRANCH"
 
           if [ -z "$BRANCH" ]; then
-            echo "Cloning default branch..."
-            git clone "$URL" repo_clone
+            echo "Cloning default branch (shallow)..."
+            git clone --depth=1 "$URL" repo_clone
           else
-            echo "Cloning branch: $BRANCH"
-            git clone -b "$BRANCH" "$URL" repo_clone
+            echo "Cloning branch: $BRANCH (shallow)..."
+            git clone --depth=1 -b "$BRANCH" "$URL" repo_clone
           fi
 
-      - name: Zip the cloned repo
-        run: |
-          zip -r repo_clone.zip repo_clone
+      - name: Zip repo
+        run: zip -r repo_clone.zip repo_clone
 
-      - name: Upload ke GoFile (store1 → fallback store2)
+      - name: Upload ke GoFile (store1 → store2)
         id: upload
         run: |
           FILE="repo_clone.zip"
@@ -53,7 +52,7 @@ jobs:
 
           echo "download_link=$DOWNLOAD_LINK" >> $GITHUB_OUTPUT
 
-      - name: Show Download Link
+      - name: Show download link
         run: |
-          echo "== HASIL UPLOAD GoFile =="
+          echo "== HASIL UPLOAD =="
           echo "${{ steps.upload.outputs.download_link }}"

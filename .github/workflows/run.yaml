@@ -6,9 +6,6 @@ on:
       repo_url:
         description: "Masukkan URL git yang mau di-clone"
         required: true
-      gofile_token:
-        description: "Masukkan API token GoFile (https://gofile.io/myProfile)"
-        required: true
 
 jobs:
   clone_and_upload:
@@ -31,19 +28,13 @@ jobs:
         id: upload
         run: |
           echo "Uploading to GoFile..."
-          UPLOAD_RESPONSE=$(curl -s -X POST \
-            -H "Authorization: Bearer ${{ github.event.inputs.gofile_token }}" \
-            -F "file=@repo_clone.zip" \
-            https://api.gofile.io/uploadFile)
+          RESPONSE=$(curl -s -F "file=@repo_clone.zip" "https://store1.gofile.io/contents/uploadfile" \
+          	|| curl -s -F "file=@$repo_clone.zip" "https://store2.gofile.io/contents/uploadfile")
+          	DOWNLOAD_LINK=$(echo "$RESPONSE" | grep -oP '"downloadPage":"\K[^"]+')
 
           echo "Respons: $UPLOAD_RESPONSE"
-
-          # ambil direct link dari JSON
-          DIRECT_LINK=$(echo "$UPLOAD_RESPONSE" | jq -r '.data.downloadPage')
-
-          echo "direct_link=$DIRECT_LINK" >> $GITHUB_OUTPUT
 
       - name: Show Download Link
         run: |
           echo "Download link dari GoFile:"
-          echo "${{ steps.upload.outputs.direct_link }}"
+          echo "$DOWNLOAD_LINK"
